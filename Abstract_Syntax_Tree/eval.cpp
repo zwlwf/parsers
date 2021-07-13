@@ -128,7 +128,8 @@ void next_token() {
 
 	if( isdigit(LastChar) || LastChar == '.') {
 		CurrentToken = NUM_TOKEN;
-		fseek(fp, -1, SEEK_CUR);
+		//fseek(fp, -1, SEEK_CUR);
+		ungetc(LastChar, fp);
 		fscanf(fp,"%lf", &numeric_val);
 		LastChar = fgetc(fp);
 		return;
