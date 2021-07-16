@@ -120,6 +120,13 @@ Table parse_csv(FILE *fp) {
 	}
 }
 
+void freeTable(Table tb) {
+	for(int i=0; i<tb.size(); i++) {
+		for(int j=0; j<tb[i].size(); j++) 
+			delete tb[i][j];
+	}
+}
+
 // render the csv as a python listof list
 static void render_as_python_listlist(Table& tb) { 
 	printf("[");
@@ -142,6 +149,7 @@ int main(int argc, char** argv) {
 	}
 	Table x = parse_csv(fp);
 	render_as_python_listlist(x);
+	freeTable(x);
 	printf("\n");
 	fclose(fp);
 	return 0;

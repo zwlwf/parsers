@@ -72,8 +72,9 @@ class DictValue : public BaseValue {
 		}
 	}
 	virtual ~DictValue() {
-	//TODO
+		for(int i=0; i<mp.size(); i++) delete mp[i].second;
 	}
+
 	virtual void render(int indent) {
 		printf("{\n");
 		for(auto x : mp) {
@@ -236,15 +237,18 @@ BaseValue* parse_value( FILE* fp ) {
 	}
 }
 
-int main() {
+int main(int argc, char** argv) {
 	FILE *fp = stdin;
-	fp = fopen("data.inp", "r");
+	if(argc>1)
+		fp = fopen("data.inp", "r");
 	next_token(fp);
 	BaseValue* V = parse_value(fp);
 	if(V) V->render(0);
 	else {
 		printf("Wrong format Json\n");
 	}
+	printf("\n\n");
+	delete V;
 	return 0;
 }
 
