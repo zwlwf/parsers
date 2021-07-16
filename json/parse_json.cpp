@@ -7,14 +7,19 @@
 class BaseValue { // 6 types: false/null/true/object/array/number/string
 	public:
 	virtual ~BaseValue() {}
-	virtual void render() = 0;
+	virtual void render(int indent) = 0;
 };
+
+inline void printIndent(int n) {
+	for(int i=0; i<n; i++) printf(" ");
+}
 
 class StringValue : public BaseValue {
 	std::string str;
 	public:
 	virtual ~StringValue() {}
-	virtual void render() {
+	virtual void render(int indent) {
+		//printIndent(indent);
 		printf("\"%s\"", str.c_str());
 	}
 
@@ -32,13 +37,15 @@ class ArrayValue : public BaseValue {
 		v = v_;
 	}
 
-	virtual void render() {
+	virtual void render(int indent) {
 		printf("[\n");
 		for(auto x : v) {
-			x->render();
-			printf(" ,");
+			printIndent(indent+2);
+			x->render(indent+2);
+			printf(",\n");
 		}
-		printf("]\n");
+		printIndent(indent);
+		printf("]");
 	}
 
 };
@@ -48,30 +55,35 @@ class NumberValue : public BaseValue {
 	public:
 	NumberValue(double v) : val(v) { }
 	virtual ~NumberValue() {}
-	virtual void render() {
+	virtual void render(int indent) {
+		//printIndent(indent);
 		printf("%g", val);
 	}
 };
 
 class DictValue : public BaseValue {
-	std::unordered_map<std::string, BaseValue*> mp;
+	//std::unordered_map<std::string, BaseValue*> mp;
+	std::vector<std::pair<std::string, BaseValue*> > mp;
 	public:
 	DictValue(std::vector<std::string> keys, std::vector<BaseValue*> vals ) {
 		for(int i = 0; i<keys.size(); i++) {
-			mp[keys[i]] = vals[i];
+			//mp[keys[i]] = vals[i];
+			mp.push_back(std::make_pair(keys[i], vals[i]));
 		}
 	}
 	virtual ~DictValue() {
 	//TODO
 	}
-	virtual void render() {
+	virtual void render(int indent) {
 		printf("{\n");
 		for(auto x : mp) {
+			printIndent(indent+2);
 			printf("\"%s\" : ", x.first.c_str());
-		   	x.second->render();
+		   	x.second->render(indent+2);
 			printf(",\n");
 		}
-		printf("}\n");
+		printIndent(indent);
+		printf("}");
 	}
 };
 
@@ -86,7 +98,7 @@ class ConstValue : public BaseValue {
 	public:
 	ConstValue(ConstType c) : ct(c) {}
 	virtual ~ConstValue() {}
-	virtual void render() {
+	virtual void render(int indent) {
 		switch( ct ) {
 			case False :
 				printf("false"); break;
@@ -229,7 +241,7 @@ int main() {
 	fp = fopen("data.inp", "r");
 	next_token(fp);
 	BaseValue* V = parse_value(fp);
-	if(V) V->render();
+	if(V) V->render(0);
 	else {
 		printf("Wrong format Json\n");
 	}
