@@ -133,9 +133,35 @@ void next_token(FILE* fp) {
 		Identifier_str = "";
 		LastChar = fgetc(fp); // eat "
 		// parse escaped or non-escaped data
-		while( LastChar != '"') {
-			Identifier_str += LastChar;
-			LastChar = fgetc(fp);
+		while(LastChar != EOF) {
+			if(LastChar=='\\') {
+				LastChar = fgetc(fp);
+				if(LastChar == 'u') {
+					unsigned char byte[4];
+					for(int i=0; i<4; i++) byte[i] = fgetc(fp);
+					if(byte[4] == EOF) // error happen
+						printf("wrong char");
+					//Identifier_str += '\\'; // \uXXXX
+				}
+				else if(LastChar == 'b') 
+					Identifier_str += 0x8;
+				else if(LastChar == 'f')
+					Identifier_str += 0xc;
+				else if(LastChar == 'n')
+					Identifier_str += 0xA;
+				else if(LastChar == 'r')
+					Identifier_str += 0xD;
+				else if(LastChar == 't')
+					Identifier_str += '\t';
+				else // quotation, solidus or reverse solidus
+					Identifier_str += LastChar;
+				LastChar = fgetc(fp);
+			} else if (LastChar=='"') 
+				break;
+			else {
+				Identifier_str += LastChar;
+				LastChar = fgetc(fp);
+			}
 		}
 		LastChar = fgetc(fp); // eat another "
 	} else if(LastChar == 'f' || LastChar == 't' || LastChar == 'n' ) { // false/true/null
