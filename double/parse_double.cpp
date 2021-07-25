@@ -2,37 +2,37 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <math.h>
+#include "Stream_With_Lastchar.h"
+#include "parse_double.h"
 
-static int LastChar = ' ';
-
-static double parse_float(FILE* fp) {
-	//LastChar = fgetc(fp); // eat .
+static double parse_float(Stream_With_Lastchar* swl) {
 	double ans = 0.0;
 	double base = 1.0;
 
-	while( isdigit(LastChar) ) {
+	while( isdigit(swl->LastChar) ) {
 		base /= 10;
-		ans += base*(LastChar-'0');
-		LastChar = fgetc(fp);
+		ans += base*(swl->LastChar-'0');
+		swl->getc();
 	}
 	return ans;
 }
 
-static int parse_int(FILE* fp) {
+static int parse_int(Stream_With_Lastchar* swl) {
 	int ans = 0;
-	while( isdigit(LastChar) ) {
-		ans = ans*10+(LastChar-'0');
-		LastChar = fgetc(fp);
+	while( isdigit(swl->LastChar) ) {
+		ans = ans*10+(swl->LastChar-'0');
+		swl->getc();
 	}
 	return ans;
 }
 
 // parse a double as long as I can, so make sure this is a number before calling
-double parse_double(FILE* fp) {
+double parse_double(Stream_With_Lastchar* swl, int*status) {
 	// assume parse [flag] a.b E c
-	while( isspace(LastChar) ) LastChar = fgetc(fp);
-	if(LastChar == EOF) {
+	while( isspace(swl->LastChar) ) swl->getc();
+	if(swl->LastChar == EOF) {
 		// failed
+		if(status) *status = -1;
 		return 0.0;
 	}
 	int flag=1;
@@ -40,52 +40,52 @@ double parse_double(FILE* fp) {
 	double b = 0.0;
 	int c = 0;
 	
-	if(LastChar == '+' || LastChar == '-') {
-		if(LastChar == '-') flag = -1;
-		LastChar = fgetc(fp);
+	if(swl->LastChar == '+' || swl->LastChar == '-') {
+		if(swl->LastChar == '-') flag = -1;
+		swl->getc();
 	}
 
-	if(LastChar == EOF) return 0.0; //failed
+	if(swl->LastChar == EOF) {
+		if(status) *status = -1;
+	   	return 0.0; //failed
+	}
 
-	if(LastChar == '.') {
-		LastChar = fgetc(fp);
-		if( LastChar==EOF || !isdigit(LastChar) ) return 0.0; // failed
-		b = parse_float(fp);
-	} else if( isdigit(LastChar) ) {
-		a = parse_int(fp);
-		if(LastChar == '.') {
-			LastChar = fgetc(fp);
-			b = parse_float(fp);
+	if(swl->LastChar == '.') {
+		swl->getc();
+		if( swl->LastChar==EOF || !isdigit(swl->LastChar) ) {
+			if(status) *status = -1;
+			return 0.0; // failed
+		}
+		b = parse_float(swl);
+	} else if( isdigit(swl->LastChar) ) {
+		a = parse_int(swl);
+		if(swl->LastChar == '.') {
+			swl->getc();
+			b = parse_float(swl);
 		}
 	} else {
 		// failed
+		if(status) *status = -1;
 		return 0.0;
 	}
 
 	// align to e/E 
-	if( LastChar=='e' || LastChar == 'E') {
-		LastChar = fgetc(fp);
+	if( swl->LastChar=='e' || swl->LastChar == 'E') {
+		swl->getc();
 		int flag2 = 1;
-		if(LastChar == '+' || LastChar == '-') {
-			if(LastChar == '-') flag2 = -1;
-			LastChar = fgetc(fp);
+		if(swl->LastChar == '+' || swl->LastChar == '-') {
+			if(swl->LastChar == '-') flag2 = -1;
+			swl->getc();
 		}
-		if( !isdigit(LastChar) ) {
+		if( !isdigit(swl->LastChar) ) {
 			// failed
+			if(status) *status = -1;
 			return 0.0;
 		}
-		c = parse_int(fp);
+		c = parse_int(swl);
 		c *= flag2;
 	} 
 
+	if(status) status = 0;
 	return flag*(a+b)*pow(10, c);
 }
-
-int main() {
-	double d;
-	printf("input a double>>");
-	d = parse_double(stdin);
-	printf("d = %lf\n", d);
-	return 0;
-}
-

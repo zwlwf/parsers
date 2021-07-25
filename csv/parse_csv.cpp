@@ -6,6 +6,7 @@
 #include <vector>
 #include <stdio.h>
 #include <stdlib.h>
+#include "Stream_With_Lastchar.h"
 
 class BaseCell {
 	public:
@@ -55,47 +56,46 @@ enum cellType {
 
 static int CurrentCellType;
 
-static BaseCell* parse_cell(FILE* fp) {
-	static int LastChar = '\r';
+static BaseCell* parse_cell(Stream_With_Lastchar* swl) {
 	std::string ans = "";
-	if(LastChar == ',') {
+	if(swl->LastChar == ',') {
 		CurrentCellType = IN_LINE;
-		LastChar = fgetc(fp);
-	} else if( LastChar == '\r') {
-		LastChar = fgetc(fp); // eat \n
-		LastChar = fgetc(fp); 
+		swl->getc();
+	} else if( swl->LastChar == '\r') {
+		swl->getc(); // eat \n
+		swl->getc(); 
 		CurrentCellType = BEGIN_LINE;
-	} else if( LastChar == '\n') {
-		LastChar = fgetc(fp);
+	} else if( swl->LastChar == '\n') {
+		swl->getc();
 		CurrentCellType = BEGIN_LINE;
 	} 
 
-	if(LastChar == EOF) {
+	if(swl->LastChar == EOF) {
 		CurrentCellType = END_CSV;
 		return NULL;
 	}
 
-	if(LastChar == '"') { // parse escaped cell
+	if(swl->LastChar == '"') { // parse escaped cell
 		while(1) {
-			LastChar = fgetc(fp);
-			if(LastChar == EOF) return NULL; 
-			if(LastChar=='"') {
-				LastChar = fgetc(fp);
-				if(LastChar == '"') ans+='"';
+			swl->getc();
+			if(swl->LastChar == EOF) return NULL; 
+			if(swl->LastChar=='"') {
+				swl->getc();
+				if(swl->LastChar == '"') ans+='"';
 				else break;
 			} else {
-				ans+=char(LastChar);
+				ans+=char(swl->LastChar);
 			}
 		}
-		LastChar = fgetc(fp); // LastChar point to char after "
-		if(LastChar != ',' && LastChar != '\r' && LastChar != '\n') return NULL; 
+		swl->getc(); // LastChar point to char after "
+		if(swl->LastChar != ',' && swl->LastChar != '\r' && swl->LastChar != '\n') return NULL; 
 	} else { // parse non-escaped cell
-		while( is_textdata(LastChar) ) { 
-			ans+=char(LastChar);
-			LastChar = fgetc(fp);
+		while( is_textdata(swl->LastChar) ) { 
+			ans+=char(swl->LastChar);
+			swl->getc();
 		}
 		// end with , or CRLF or EOF
-		if(LastChar != ',' && LastChar != '\r' && LastChar != '\n' && LastChar != EOF ) return NULL; 
+		if(swl->LastChar != ',' && swl->LastChar != '\r' && swl->LastChar != '\n' && swl->LastChar != EOF ) return NULL; 
 	}
 
 	if(ans.empty()) return new NullCell();
@@ -104,10 +104,10 @@ static BaseCell* parse_cell(FILE* fp) {
 
 typedef std::vector<std::vector<BaseCell*>> Table;
 
-Table parse_csv(FILE *fp) {
+Table parse_csv(Stream_With_Lastchar *swl) {
 	Table ans;
 	while(1) {
-		BaseCell *c = parse_cell(fp);
+		BaseCell *c = parse_cell(swl);
 		if(CurrentCellType==END_CSV) return ans;
 		if(!c) {
 			printf("Some thing is wrong with your csv file\n");
@@ -141,16 +141,3 @@ static void render_as_python_listlist(Table& tb) {
 	printf("]");
 }
 
-int main(int argc, char** argv) {
-	FILE *fp = fopen(argv[1], "r");
-	if(!fp) {
-		printf("Failed to open %s\n", argv[1]);
-		return -1;
-	}
-	Table x = parse_csv(fp);
-	render_as_python_listlist(x);
-	freeTable(x);
-	printf("\n");
-	fclose(fp);
-	return 0;
-}

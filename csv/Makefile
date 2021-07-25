@@ -1,2 +1,2 @@
-a.exe : parse_csv.cpp
-	g++ -g parse_csv.cpp -std=c++11
+a : main.cpp
+	g++ -g main.cpp ../Stream_With_Lastchar.cpp -std=c++11 -I.. 
